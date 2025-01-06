@@ -2,38 +2,29 @@ package net.sailware.hello
 
 import com.badlogic.gdx.ApplicationAdapter
 import com.badlogic.gdx.Gdx
-import com.badlogic.gdx.graphics.glutils.ShapeRenderer
 import com.badlogic.gdx.graphics.GL20
+import com.badlogic.gdx.graphics.Color
+import com.badlogic.gdx.graphics.glutils.ShapeRenderer
 import java.util.Random
 
 class Main extends ApplicationAdapter:
 
   var shape: ShapeRenderer = null
-  var balls: scala.collection.mutable.Set[Ball] = scala.collection.mutable.Set()
+  var ball: Ball = null
+  var paddle: Paddle = null
 
   override def create(): Unit =
     shape = ShapeRenderer()
-    val random = Random()
-    Range(0, 10).foreach(value =>
-        println(s"Creating ball: $value")
-        val ball = Ball(
-            random.nextInt(Gdx.graphics.getWidth()).toFloat,
-            random.nextInt(Gdx.graphics.getHeight()).toFloat,
-            random.nextInt(100).toFloat,
-            random.nextInt(15).toFloat,
-            random.nextInt(15).toFloat
-        )
-        balls += ball
-    )
-    println(s"Balls: $balls")
+    ball = Ball(Gdx.graphics.getWidth() / 2F, 50F, 25F, 2.5F, 2.5F)
+    paddle = Paddle(Gdx.graphics.getWidth() / 2F - 40F , 15F, 80F, 10F)
 
   override def render(): Unit =
     Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT)
+    paddle.update()
+    ball.update(paddle)
     shape.begin(ShapeRenderer.ShapeType.Filled)
-    balls.foreach(ball =>
-      ball.update()
-      ball.draw(shape)
-    )
+    paddle.draw(shape)
+    ball.draw(shape)
     shape.end()
 
 class Ball(
@@ -44,15 +35,41 @@ class Ball(
     var ySpeed: Float
 ):
 
-  def update(): Unit =
+  var color = Color.WHITE
+
+  def update(paddle: Paddle): Unit =
     x += xSpeed
     y += ySpeed
 
-    if x < 0 || x > Gdx.graphics.getWidth() then
+    if x < 0 + size / 2F || x > Gdx.graphics.getWidth() - size / 2F then
       xSpeed = -xSpeed
 
-    if y < 0 || y > Gdx.graphics.getHeight() then
+    if y < 0 + size / 2F || y > Gdx.graphics.getHeight() - size / 2F then
+      ySpeed = -ySpeed
+
+    if collidedWithPaddle(paddle) then
       ySpeed = -ySpeed
 
   def draw(shape: ShapeRenderer): Unit =
+    shape.setColor(color)
     shape.circle(x, y, size)
+
+  def collidedWithPaddle(paddle: Paddle): Boolean =
+    if x + size < paddle.x then false
+    else if x - size > paddle.x + paddle.width then false
+    else if y + size < paddle.y then false
+    else if y - size > paddle.y + paddle.height then false
+    else true
+
+class Paddle(
+    var x: Float,
+    var y: Float,
+    var width: Float,
+    var height: Float
+):
+
+  def update(): Unit =
+    x = Gdx.input.getX() - width / 2F
+
+  def draw(shape: ShapeRenderer): Unit =
+    shape.rect(x, y, width, height)
